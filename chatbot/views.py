@@ -13,6 +13,7 @@ from pylti1p3.grade import Grade
 from pylti1p3.lineitem import LineItem
 from pylti1p3.tool_config import ToolConfJsonFile
 from pylti1p3.registration import Registration
+from django.views.decorators.csrf import csrf_exempt
 
 
 PAGE_TITLE = 'Chat'
@@ -33,21 +34,12 @@ class ExtendedDjangoMessageLaunch(DjangoMessageLaunch):
 
 
 def get_lti_config_path():
-    return os.path.join(settings.BASE_DIR, '..', 'configs', 'chatbot.json')
+    return os.path.join(settings.BASE_DIR, 'configs', 'chatbot.json')
 
 
 def get_tool_conf():
     tool_conf = ToolConfJsonFile(get_lti_config_path())
     return tool_conf
-
-
-def get_jwk_from_public_key(key_name):
-    key_path = os.path.join(settings.BASE_DIR, '..', 'configs', key_name)
-    f = open(key_path, 'r')
-    key_content = f.read()
-    jwk = Registration.get_jwk(key_content)
-    f.close()
-    return jwk
 
 
 def get_launch_data_storage():
@@ -60,27 +52,26 @@ def get_launch_url(request):
         raise Exception('Missing "target_link_uri" param')
     return target_link_uri
 
-
+@csrf_exempt
 def login(request):
     tool_conf = get_tool_conf()
     launch_data_storage = get_launch_data_storage()
 
     oidc_login = DjangoOIDCLogin(request, tool_conf, launch_data_storage=launch_data_storage)
     target_link_uri = get_launch_url(request)
-    return oidc_login\
-        .enable_check_cookies()\
-        .redirect(target_link_uri)
+    print(target_link_uri)
+    return oidc_login.enable_check_cookies().redirect(target_link_uri)
 
-
-@require_POST
+@csrf_exempt
 def launch(request):
+    print("gets here")
     tool_conf = get_tool_conf()
     launch_data_storage = get_launch_data_storage()
     message_launch = ExtendedDjangoMessageLaunch(request, tool_conf, launch_data_storage=launch_data_storage)
     message_launch_data = message_launch.get_launch_data()
     pprint.pprint(message_launch_data)
 
-    return render(request, 'game.html', {
+    return render(request, 'chatbot.html', {
         'page_title': PAGE_TITLE,
         'is_deep_link_launch': message_launch.is_deep_link_launch(),
         'launch_data': message_launch.get_launch_data(),
@@ -91,26 +82,6 @@ def launch(request):
 def get_jwks(request):
     tool_conf = get_tool_conf()
     return JsonResponse(tool_conf.get_jwks(), safe=False)
-
-
-def configure(request, launch_id, difficulty):
-    tool_conf = get_tool_conf()
-    launch_data_storage = get_launch_data_storage()
-    message_launch = ExtendedDjangoMessageLaunch.from_cache(launch_id, request, tool_conf,
-                                                            launch_data_storage=launch_data_storage)
-
-    if not message_launch.is_deep_link_launch():
-        return HttpResponseForbidden('Must be a deep link!')
-
-    launch_url = request.build_absolute_uri(reverse('game-launch') + '?difficulty=' + difficulty)
-
-    resource = DeepLinkResource()
-    resource.set_url(launch_url)\
-        .set_custom_params({'difficulty': difficulty})\
-        .set_title('Breakout ' + difficulty + ' mode!')
-
-    html = message_launch.get_deep_link().output_response_form([resource])
-    return HttpResponse(html)
 
 
 # @require_POST
