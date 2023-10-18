@@ -1,0 +1,8 @@
+django==4.1.2
+PyLTI1p3==2.0.0
+celery==5.3.1  # pyup: < 5.0  # https://github.com/celery/celery
+redis==3.5.3  # https://github.com/andymccurdy/redis-py
+pinecone-client==2.2.1 
+pinecone-datasets==0.5.1 
+langchain==0.0.162 
+tiktoken==0.4.0

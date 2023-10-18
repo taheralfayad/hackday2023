@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    ports:
+      - "9000:9000"
+    command: /bin/sh -c "sleep 5 && python manage.py runserver 0.0.0.0:9000"
+    depends_on:
+      - redis
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["celery", "-A", "hackday2023", "worker", "--loglevel=info", "--concurrency=1"]
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+
+  redis:
+    image: "redis:alpine"
+
+volumes:
+  mysql_data:
+
+# networks:
+#   default:
+#     external:
+#       name: hackday2023
