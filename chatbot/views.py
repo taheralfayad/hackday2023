@@ -81,3 +81,11 @@ def launch(request):
 def get_jwks(request):
     tool_conf = get_tool_conf()
     return JsonResponse(tool_conf.get_jwks(), safe=False)
+
+@csrf_exempt
+def handle_message(request):
+    if request.method == "POST":
+        user_message = request.POST.get('message')
+        print(user_message)
+        # Process the user_message
+        return JsonResponse({'status': 'success', 'message': 'Message received'})
