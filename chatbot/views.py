@@ -15,6 +15,8 @@ from pylti1p3.tool_config import ToolConfJsonFile
 from pylti1p3.registration import Registration
 from django.views.decorators.csrf import csrf_exempt
 
+from .tasks import send_message_back
+
 
 PAGE_TITLE = 'Chat'
 
@@ -68,7 +70,6 @@ def launch(request):
     launch_data_storage = get_launch_data_storage()
     message_launch = ExtendedDjangoMessageLaunch(request, tool_conf, launch_data_storage=launch_data_storage)
     message_launch_data = message_launch.get_launch_data()
-    pprint.pprint(message_launch_data)
 
     return render(request, 'chatbot.html', {
         'page_title': PAGE_TITLE,
@@ -86,6 +87,5 @@ def get_jwks(request):
 def handle_message(request):
     if request.method == "POST":
         user_message = request.POST.get('message')
-        print(user_message)
-        # Process the user_message
+        send_message_back.delay(user_message)
         return JsonResponse({'status': 'success', 'message': 'Message received'})
