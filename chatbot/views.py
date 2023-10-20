@@ -1,7 +1,7 @@
 import datetime
 import os
-import pprint
 
+from django.core.cache import cache
 from django.conf import settings
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import render
@@ -19,7 +19,6 @@ from .tasks import send_message_back
 
 
 PAGE_TITLE = 'Chat'
-
 
 class ExtendedDjangoMessageLaunch(DjangoMessageLaunch):
 
@@ -70,6 +69,9 @@ def launch(request):
     launch_data_storage = get_launch_data_storage()
     message_launch = ExtendedDjangoMessageLaunch(request, tool_conf, launch_data_storage=launch_data_storage)
     message_launch_data = message_launch.get_launch_data()
+    course_id = message_launch_data["https://purl.imsglobal.org/spec/lti/claim/custom"]["canvas_course_id"]
+
+    cache.set("course_id", course_id, 3600)
 
     return render(request, 'chatbot.html', {
         'page_title': PAGE_TITLE,
@@ -85,7 +87,9 @@ def get_jwks(request):
 
 @csrf_exempt
 def handle_message(request):
+    print(request.session.keys())
+    course_id = cache.get("course_id")
     if request.method == "POST":
         user_message = request.POST.get('message')
-        send_message_back.delay(user_message)
+        send_message_back.delay(user_message, course_id)
         return JsonResponse({'status': 'success', 'message': 'Message received'})
